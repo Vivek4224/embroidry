@@ -11,6 +11,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QTimer, QDateTime, Qt
 from PyQt5.QtGui import QFont
 from home import HomePage
+from party_page import PartyPage
+from PyQt5.QtCore import QTranslator, QLocale
 
 # Save & Load Theme
 THEME_FILE = "theme.json"
@@ -35,9 +37,22 @@ def init_db():
     c.execute('''CREATE TABLE IF NOT EXISTS employees
                  (id TEXT PRIMARY KEY, name TEXT, contact TEXT, role TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS clients
-                 (id TEXT PRIMARY KEY, name TEXT, contact TEXT, address TEXT)''')
+                 (id TEXT PRIMARY KEY, name TEXT, contact TEXT, email TEXT, address TEXT, notes TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS suppliers
+                 (supplier_id TEXT PRIMARY KEY, name TEXT, contact TEXT, address TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS products
-                 (design_id TEXT PRIMARY KEY, description TEXT, embroidery_type TEXT, price REAL, stock INTEGER)''')
+                 (design_id TEXT PRIMARY KEY, description TEXT, embroidery_type TEXT, 
+                  thread_color TEXT, supplier_id TEXT, price REAL, stock INTEGER, 
+                  reorder_point INTEGER, category TEXT, gst_rate REAL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS orders
+                 (order_id TEXT PRIMARY KEY, client_id TEXT, product_id TEXT, 
+                  quantity INTEGER, status TEXT, order_date TEXT, total_cost REAL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS purchase_orders
+                 (po_id TEXT PRIMARY KEY, supplier_id TEXT, product_id TEXT, 
+                  quantity INTEGER, order_date TEXT, status TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS stock_transactions
+                 (transaction_id TEXT PRIMARY KEY, product_id TEXT, quantity INTEGER, 
+                  type TEXT, date TEXT)''')
     c.execute('''CREATE TABLE IF NOT EXISTS expenses
                  (id TEXT PRIMARY KEY, description TEXT, amount REAL, date TEXT)''')
     conn.commit()
@@ -746,7 +761,19 @@ class MainPage(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
         self.stacked_widget = stacked_widget
+        self.translator = QTranslator()
         self.initUI()
+
+    def change_language(self, language):
+        if language == "Hindi":
+            self.translator.load("translations/hi.qm")
+            QApplication.instance().installTranslator(self.translator)
+        elif language == "Gujarati":
+            self.translator.load("translations/gu.qm")
+            QApplication.instance().installTranslator(self.translator)
+        else:
+            QApplication.instance().removeTranslator(self.translator)
+        self.update_ui_texts()
 
     def initUI(self):
         self.layout = QVBoxLayout()
@@ -812,12 +839,12 @@ class MainPage(QWidget):
 
         # Pages dictionary
         self.pages = {
-            "Home": HomePage(),
-            "Employee Details": EmployeePage(),
-            "Party Details": PartyPage(),
-            "Material Details": MaterialPage(),
-            "Expense Details": ExpensePage()
-        }
+    "Home": HomePage(),
+    "Employee Details": EmployeePage(),
+    "Party Details": PartyPage(),
+    "Material Details": MaterialPage(),
+    "Expense Details": ExpensePage()
+}
 
         self.main_layout.addWidget(self.side_menu_frame, 1)
         self.main_layout.addWidget(self.content_frame, 4)
